@@ -73,9 +73,12 @@
 	#include <glib.h>
 	#include <string.h>
 	#include <ctype.h>
+	#include <errno.h>
+	#include <sys/types.h>
+        #include <unistd.h>
 
 	void begin_code();
-	void produce_code(GNode* node);
+	void produce_code(GNode *node, FILE *stream, char *textPtr);
 	void end_code();
 	extern int	yylex(void);
 	extern int	yyerror(const char *msg);
@@ -85,7 +88,9 @@
 	GHashTable	*table;
 	char		*module_name;
 
-#line 89 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+	static int ilcpt = -1;
+
+#line 94 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -138,15 +143,35 @@ extern int yydebug;
     TOK_AFFECTATION = 260,
     TOK_SEMI_COLON = 261,
     TOK_IF = 262,
-    TOK_THEN = 263,
-    TOK_ADD = 264,
-    TOK_SUB = 266,
-    TOK_MUL = 268,
-    TOK_DIV = 270,
-    TOK_OPEN_PARENTHESIS = 272,
-    TOK_CLOSE_PARENTHESIS = 273,
-    TOK_PRINT = 274,
-    TOK_READ = 275
+    TOK_ELSE = 263,
+    TOK_ELSEIF = 264,
+    TOK_THEN = 265,
+    TOK_ENDIF = 266,
+    TOK_WHILE = 267,
+    TOK_DO = 268,
+    TOK_CONTINUE = 269,
+    TOK_BREAK = 270,
+    TOK_ENDWHILE = 271,
+    TOK_END = 272,
+    TOK_ADD = 273,
+    TOK_SUB = 275,
+    TOK_MUL = 277,
+    TOK_DIV = 279,
+    TOK_NOT = 281,
+    TOK_TRUE = 283,
+    TOK_FALSE = 284,
+    TOK_SUP_EGAL = 285,
+    TOK_INF_EGAL = 286,
+    TOK_SUP = 287,
+    TOK_INF = 288,
+    TOK_EGAL = 289,
+    TOK_SHARP = 290,
+    TOK_AND = 291,
+    TOK_OR = 292,
+    TOK_OPEN_PARENTHESIS = 293,
+    TOK_CLOSE_PARENTHESIS = 294,
+    TOK_PRINT = 295,
+    TOK_READ = 296
   };
 #endif
 
@@ -154,13 +179,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 21 "facile.y"
+#line 26 "facile.y"
 
 	gulong	number;
 	gchar	*string;
 	GNode	*node;
 
-#line 164 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 189 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -479,19 +504,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  3
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   40
+#define YYLAST   150
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  21
+#define YYNTOKENS  42
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  10
+#define YYNNTS  18
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  19
+#define YYNRULES  47
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  33
+#define YYNSTATES  89
 
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   275
+#define YYMAXUTOK   296
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -530,15 +555,20 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20
+      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
+      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
+      35,    36,    37,    38,    39,    40,    41
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_int16 yyrline[] =
 {
-       0,    52,    52,    61,    68,    74,    75,    76,    80,    89,
-      96,   104,   106,   108,   115,   122,   129,   136,   143,   156
+       0,    87,    87,    96,   102,   108,   109,   110,   111,   112,
+     116,   124,   131,   138,   149,   156,   162,   167,   173,   177,
+     183,   192,   196,   200,   206,   212,   216,   222,   227,   232,
+     238,   244,   250,   256,   262,   268,   273,   279,   285,   291,
+     293,   295,   301,   307,   313,   319,   325,   337
 };
 #endif
 
@@ -548,10 +578,15 @@ static const yytype_uint8 yyrline[] =
 static const char *const yytname[] =
 {
   "$end", "error", "$undefined", "\"number\"", "\"identifier\"", "\":=\"",
-  "\";\"", "\"if\"", "\"then\"", "TOK_ADD", "\"+\"", "TOK_SUB", "\"-\"",
-  "TOK_MUL", "\"*\"", "TOK_DIV", "\"/\"", "\"(\"", "\")\"", "\"print\"",
-  "\"read\"", "$accept", "program", "code", "instruction", "affectation",
-  "print", "read", "expression", "identifier", "number", YY_NULLPTR
+  "\";\"", "\"if\"", "\"else\"", "\"elseif\"", "\"then\"", "\"endif\"",
+  "\"while\"", "\"do\"", "\"continue\"", "\"break\"", "\"endwhile\"",
+  "\"end\"", "TOK_ADD", "\"+\"", "TOK_SUB", "\"-\"", "TOK_MUL", "\"*\"",
+  "TOK_DIV", "\"/\"", "\"not\"", "\"!\"", "\"true\"", "\"false\"",
+  "\">=\"", "\"<=\"", "\">\"", "\"<\"", "\"=\"", "\"#\"", "\"and\"",
+  "\"or\"", "\"(\"", "\")\"", "\"print\"", "\"read\"", "$accept",
+  "program", "code", "instruction", "affectation", "print", "read", "if",
+  "elseif", "else", "endif", "while", "code_while", "endwhile", "boolean",
+  "expression", "identifier", "number", YY_NULLPTR
 };
 #endif
 
@@ -562,11 +597,13 @@ static const yytype_int16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275
+     275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
+     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
+     295,   296
 };
 # endif
 
-#define YYPACT_NINF (-13)
+#define YYPACT_NINF (-66)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -580,10 +617,15 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-     -13,     2,    -4,   -13,   -13,     0,     4,   -13,   -13,   -13,
-     -13,     8,   -13,     0,    12,   -13,   -13,    13,     0,    11,
-     -13,     0,     0,     0,     0,   -13,    22,   -13,    19,    -8,
-      -1,   -13,   -13
+     -66,     3,    51,   -66,   -66,    49,    49,     5,    11,   -66,
+     -66,   -66,   -66,   -66,   -66,     2,   -66,    49,   -66,   -66,
+      49,    35,   108,   -66,   -66,    57,     5,   100,    14,     5,
+      43,   -18,    77,   -66,    49,    49,     5,     5,     5,     5,
+       5,     5,     5,     5,     5,     5,    42,    78,   -66,   -66,
+     107,   -66,   -66,    20,    43,    43,   -10,    62,     1,   -66,
+     126,   126,   126,   126,   126,   126,    42,    42,    42,    87,
+     -66,    49,    54,   -66,   -66,   -66,   -66,   -66,   -66,    37,
+     -66,    -6,   -66,    51,   -66,   -66,   -66,    20,   -66
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -591,22 +633,29 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       4,     0,     2,     1,    18,     0,     0,     3,     5,     6,
-       7,     0,    19,     0,     0,    11,    12,     0,     0,     0,
-       9,     0,     0,     0,     0,    10,     0,    17,    13,    14,
-      15,    16,     8
+       4,     0,     2,     1,    46,     0,     0,     0,     0,     3,
+       5,     6,     7,     8,     9,     0,    47,     0,    27,    28,
+       0,     0,     0,    39,    40,     0,     0,     0,     0,     0,
+      35,     0,     0,     4,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,    24,     0,    11,    12,
+       0,    38,    45,    15,    36,    37,    41,    42,    43,    44,
+      29,    30,    31,    32,    33,    34,    24,    24,    24,     0,
+      10,     0,    17,    21,    22,    23,    25,    26,    20,     0,
+       4,     0,     4,    16,    18,    19,    13,    15,    14
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -13,   -13,   -13,   -13,   -13,   -13,   -13,   -12,    34,   -13
+     -66,   -66,   -32,    22,   -66,   -66,   -66,   -66,   -65,   -66,
+     -66,   -66,    67,   -66,    -4,    -3,    -2,   -66
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     1,     2,     7,     8,     9,    10,    14,    15,    16
+      -1,     1,     2,     9,    10,    11,    12,    13,    72,    81,
+      86,    14,    69,    78,    21,    22,    23,    24
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -614,44 +663,77 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       4,    19,     3,    12,     4,    23,    26,    24,     4,    28,
-      29,    30,    31,    18,    24,     5,     6,    13,    20,    25,
-      21,    21,    22,    22,    23,    23,    24,    24,    32,    27,
-      22,    21,    23,    22,    24,    23,    11,    24,     0,     0,
-      17
+      15,    53,    25,     3,    27,    84,    28,    29,    16,     4,
+      37,    85,    38,    30,    39,     4,    31,    32,    34,    35,
+      49,    51,    88,    47,     4,    39,    50,     5,     0,    71,
+      54,    55,     6,    56,    57,    58,    59,    60,    61,    62,
+      63,    64,    65,    26,    15,    33,     4,    82,    83,     5,
+      87,    15,    16,     4,     6,     4,    66,    67,     5,     0,
+       7,     8,    80,     6,    15,    15,    15,    79,    68,     0,
+      46,    34,    35,    34,    35,    17,     0,    18,    19,    34,
+      35,    15,     7,     8,    38,    15,    39,    20,    68,    68,
+      68,     7,     8,    34,    35,    36,    36,    37,    37,    38,
+      38,    39,    39,    76,    77,     0,    48,    40,    41,    42,
+      43,    44,    45,    70,     0,     0,    52,    52,    36,     0,
+      37,     0,    38,     0,    39,    36,    36,    37,    37,    38,
+      38,    39,    39,    73,    74,    75,     0,     0,    40,    41,
+      42,    43,    44,    45,    36,     0,    37,     0,    38,     0,
+      39
 };
 
 static const yytype_int8 yycheck[] =
 {
-       4,    13,     0,     3,     4,    13,    18,    15,     4,    21,
-      22,    23,    24,     5,    15,    19,    20,    17,     6,     6,
-       9,     9,    11,    11,    13,    13,    15,    15,     6,    18,
-      11,     9,    13,    11,    15,    13,     2,    15,    -1,    -1,
-       6
+       2,    33,     6,     0,     7,    11,     8,     5,     3,     4,
+      20,    17,    22,    17,    24,     4,    20,    20,    36,    37,
+       6,    39,    87,    26,     4,    24,    29,     7,    -1,     9,
+      34,    35,    12,    36,    37,    38,    39,    40,    41,    42,
+      43,    44,    45,    38,    46,    10,     4,    10,    80,     7,
+      82,    53,     3,     4,    12,     4,    14,    15,     7,    -1,
+      40,    41,     8,    12,    66,    67,    68,    71,    46,    -1,
+      13,    36,    37,    36,    37,    26,    -1,    28,    29,    36,
+      37,    83,    40,    41,    22,    87,    24,    38,    66,    67,
+      68,    40,    41,    36,    37,    18,    18,    20,    20,    22,
+      22,    24,    24,    16,    17,    -1,     6,    30,    31,    32,
+      33,    34,    35,     6,    -1,    -1,    39,    39,    18,    -1,
+      20,    -1,    22,    -1,    24,    18,    18,    20,    20,    22,
+      22,    24,    24,    66,    67,    68,    -1,    -1,    30,    31,
+      32,    33,    34,    35,    18,    -1,    20,    -1,    22,    -1,
+      24
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,    22,    23,     0,     4,    19,    20,    24,    25,    26,
-      27,    29,     3,    17,    28,    29,    30,    29,     5,    28,
-       6,     9,    11,    13,    15,     6,    28,    18,    28,    28,
-      28,    28,     6
+       0,    43,    44,     0,     4,     7,    12,    40,    41,    45,
+      46,    47,    48,    49,    53,    58,     3,    26,    28,    29,
+      38,    56,    57,    58,    59,    56,    38,    57,    58,     5,
+      56,    56,    57,    10,    36,    37,    18,    20,    22,    24,
+      30,    31,    32,    33,    34,    35,    13,    57,     6,     6,
+      57,    39,    39,    44,    56,    56,    57,    57,    57,    57,
+      57,    57,    57,    57,    57,    57,    14,    15,    45,    54,
+       6,     9,    50,    54,    54,    54,    16,    17,    55,    56,
+       8,    51,    10,    44,    11,    17,    52,    44,    50
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    21,    22,    23,    23,    24,    24,    24,    25,    26,
-      27,    28,    28,    28,    28,    28,    28,    28,    29,    30
+       0,    42,    43,    44,    44,    45,    45,    45,    45,    45,
+      46,    47,    48,    49,    50,    50,    51,    51,    52,    52,
+      53,    54,    54,    54,    54,    55,    55,    56,    56,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    57,
+      57,    57,    57,    57,    57,    57,    58,    59
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1,     2,     0,     1,     1,     1,     4,     3,
-       3,     1,     1,     3,     3,     3,     3,     3,     1,     1
+       0,     2,     1,     2,     0,     1,     1,     1,     1,     1,
+       4,     3,     3,     7,     5,     0,     2,     0,     1,     1,
+       5,     2,     2,     2,     0,     1,     1,     1,     1,     3,
+       3,     3,     3,     3,     3,     2,     3,     3,     3,     1,
+       1,     3,     3,     3,     3,     3,     1,     1
 };
 
 
@@ -1347,113 +1429,354 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 52 "facile.y"
-              {
+#line 87 "facile.y"
+             {
 	begin_code();
-	produce_code((yyvsp[0].node));
+	produce_code((yyvsp[0].node), stream, "END");
 	end_code();
 	g_node_destroy((yyvsp[0].node));
 }
-#line 1358 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1440 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
   case 3:
-#line 62 "facile.y"
-        {
+#line 96 "facile.y"
+                         {
 	(yyval.node) = g_node_new("code");
 	g_node_append((yyval.node), (yyvsp[-1].node));
 	g_node_append((yyval.node), (yyvsp[0].node));
 	}
-#line 1368 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1450 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
   case 4:
-#line 68 "facile.y"
+#line 102 "facile.y"
         {
 	(yyval.node) = g_node_new("");
 	}
-#line 1376 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1458 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 8:
-#line 81 "facile.y"
-        {
+  case 10:
+#line 116 "facile.y"
+                                                             {
 	(yyval.node) = g_node_new("affectation");
 	g_node_append((yyval.node), (yyvsp[-3].node));
 	g_node_append((yyval.node), (yyvsp[-1].node));
 	}
-#line 1386 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1468 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 9:
-#line 90 "facile.y"
-        {
+  case 11:
+#line 124 "facile.y"
+                                            {
 	(yyval.node) = g_node_new("print");
 	g_node_append((yyval.node), (yyvsp[-1].node));
 	}
-#line 1395 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1477 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 10:
-#line 97 "facile.y"
-        {
+  case 12:
+#line 131 "facile.y"
+                                           {
 	(yyval.node) = g_node_new("read");
 	g_node_append((yyval.node), (yyvsp[-1].node));
 	}
-#line 1404 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1486 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
   case 13:
-#line 109 "facile.y"
+#line 138 "facile.y"
+                                                       {
+	(yyval.node) = g_node_new("if");
+	g_node_append((yyval.node), (yyvsp[-5].node));
+	g_node_append((yyval.node), (yyvsp[-3].node));
+	g_node_append((yyval.node), (yyvsp[-2].node));
+	g_node_append((yyval.node), (yyvsp[-1].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1499 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 14:
+#line 149 "facile.y"
+                                                {
+	(yyval.node) = g_node_new("elseif");
+	g_node_append((yyval.node), (yyvsp[-3].node));
+        g_node_append((yyval.node), (yyvsp[-1].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1510 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 15:
+#line 156 "facile.y"
         {
+	(yyval.node) = g_node_new("");
+	}
+#line 1518 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 16:
+#line 162 "facile.y"
+                      {
+	(yyval.node) = g_node_new("else");
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1527 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 17:
+#line 167 "facile.y"
+        {
+        (yyval.node) = g_node_new("");
+        }
+#line 1535 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 18:
+#line 173 "facile.y"
+                  {
+	(yyval.node) = g_node_new("endif");
+	}
+#line 1543 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 19:
+#line 177 "facile.y"
+                {
+	(yyval.node) = g_node_new("end");
+	}
+#line 1551 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 20:
+#line 183 "facile.y"
+                                                     {
+	(yyval.node) = g_node_new("while");
+	g_node_append((yyval.node), (yyvsp[-3].node));
+	g_node_append((yyval.node), (yyvsp[-1].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1562 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 21:
+#line 192 "facile.y"
+                                {
+	(yyval.node) = g_node_new("continue");
+	}
+#line 1570 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 22:
+#line 196 "facile.y"
+                             {
+	(yyval.node) = g_node_new("break");
+	}
+#line 1578 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 23:
+#line 200 "facile.y"
+                               {
+	(yyval.node) = g_node_new("code_while");
+	g_node_append((yyval.node), (yyvsp[-1].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1588 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 24:
+#line 206 "facile.y"
+        {
+	(yyval.node) = g_node_new("");
+	}
+#line 1596 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 25:
+#line 212 "facile.y"
+                     {
+	(yyval.node) = g_node_new("endwhile");
+	}
+#line 1604 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 26:
+#line 216 "facile.y"
+                {
+	(yyval.node) = g_node_new("end");
+	}
+#line 1612 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 27:
+#line 222 "facile.y"
+                 {
+	(yyval.node) = g_node_new("true");
+	g_node_append((yyval.node), (gpointer)0);
+	}
+#line 1621 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 28:
+#line 227 "facile.y"
+                  {
+	(yyval.node) = g_node_new("false");
+	g_node_append((yyval.node), (gpointer)0);
+	}
+#line 1630 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 29:
+#line 232 "facile.y"
+                                           {
+	(yyval.node) = g_node_new("sup_egal");
+        g_node_append((yyval.node), (yyvsp[-2].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1640 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 30:
+#line 238 "facile.y"
+                                           {
+	(yyval.node) = g_node_new("inf_egal");
+        g_node_append((yyval.node), (yyvsp[-2].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1650 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 31:
+#line 244 "facile.y"
+                                      {
+	(yyval.node) = g_node_new("sup");
+        g_node_append((yyval.node), (yyvsp[-2].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1660 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 32:
+#line 250 "facile.y"
+                                      {
+	(yyval.node) = g_node_new("inf");
+        g_node_append((yyval.node), (yyvsp[-2].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1670 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 33:
+#line 256 "facile.y"
+                                       {
+	(yyval.node) = g_node_new("egal");
+	g_node_append((yyval.node), (yyvsp[-2].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1680 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 34:
+#line 262 "facile.y"
+                                        {
+	(yyval.node) = g_node_new("sharp");
+	g_node_append((yyval.node), (yyvsp[-2].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1690 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 35:
+#line 268 "facile.y"
+                        {
+	(yyval.node) = g_node_new("not");
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1699 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 36:
+#line 273 "facile.y"
+                                {
+	(yyval.node) = g_node_new("and");
+	g_node_append((yyval.node), (yyvsp[-2].node));
+	g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1709 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 37:
+#line 279 "facile.y"
+                               {
+	(yyval.node) = g_node_new("or");
+        g_node_append((yyval.node), (yyvsp[-2].node));
+        g_node_append((yyval.node), (yyvsp[0].node));
+	}
+#line 1719 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 38:
+#line 285 "facile.y"
+                                                           {
+	(yyval.node) = (yyvsp[-1].node);
+	}
+#line 1727 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+    break;
+
+  case 41:
+#line 295 "facile.y"
+                                      {
 	(yyval.node) = g_node_new("add");
 	g_node_append((yyval.node), (yyvsp[-2].node));
 	g_node_append((yyval.node), (yyvsp[0].node));
 	}
-#line 1414 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1737 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 14:
-#line 116 "facile.y"
-        {
+  case 42:
+#line 301 "facile.y"
+                                      {
 	(yyval.node) = g_node_new("sub");
         g_node_append((yyval.node), (yyvsp[-2].node));
         g_node_append((yyval.node), (yyvsp[0].node));
 	}
-#line 1424 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1747 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 15:
-#line 123 "facile.y"
-        {
+  case 43:
+#line 307 "facile.y"
+                                      {
 	(yyval.node) = g_node_new("mul");
 	g_node_append((yyval.node), (yyvsp[-2].node));
 	g_node_append((yyval.node), (yyvsp[0].node));
 	}
-#line 1434 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1757 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 16:
-#line 130 "facile.y"
-        {
+  case 44:
+#line 313 "facile.y"
+                                      {
 	(yyval.node) = g_node_new("div");
 	g_node_append((yyval.node), (yyvsp[-2].node));
 	g_node_append((yyval.node), (yyvsp[0].node));
 	}
-#line 1444 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1767 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 17:
-#line 137 "facile.y"
-        {
+  case 45:
+#line 319 "facile.y"
+                                                              {
 	(yyval.node) = (yyvsp[-1].node);
 	}
-#line 1452 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1775 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 18:
-#line 144 "facile.y"
-        {
+  case 46:
+#line 325 "facile.y"
+                       {
 	(yyval.node) = g_node_new("identifier");
 	gulong value = (gulong) g_hash_table_lookup(table, (yyvsp[0].string));
 	if (!value) {
@@ -1462,20 +1785,20 @@ yyreduce:
 	}
 	g_node_append_data((yyval.node), (gpointer) value);
 	}
-#line 1466 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1789 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
-  case 19:
-#line 157 "facile.y"
-        {
+  case 47:
+#line 337 "facile.y"
+                   {
 	(yyval.node) = g_node_new("number");
 	g_node_append_data((yyval.node), (gpointer) (yyvsp[0].number));
 	}
-#line 1475 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1798 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
     break;
 
 
-#line 1479 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
+#line 1802 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.c"
 
       default: break;
     }
@@ -1707,122 +2030,662 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 163 "facile.y"
+#line 343 "facile.y"
 
 
 int yyerror(const char *msg) {
 	fprintf(stderr, "Line %d: %s\n", yylineno, msg);
 }
 
-void begin_code() {
+char	*check_bool(FILE *pStream, char *line, char *invertedNbr) {
+	char    *lineptr = NULL;
+	int	index = 0;
+
+	if ((lineptr = strstr(line, "BLT")) != NULL) {
+		index = lineptr - line;
+
+		fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "bge" : "blt");
+                line = lineptr + strlen("BLT");
+
+                *invertedNbr = *invertedNbr - 1;
+
+	} else if ((lineptr = strstr(line, "BGT")) != NULL) {
+		index = lineptr - line;
+
+                fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "ble" : "bgt");
+                line = lineptr + strlen("BGT");
+
+                *invertedNbr = *invertedNbr - 1;
+
+	} else if ((lineptr = strstr(line, "BLE")) != NULL) {
+        	index = lineptr - line;
+
+                fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "bgt" : "ble");
+                line = lineptr + strlen("BLE");
+
+                *invertedNbr = *invertedNbr - 1;
+
+	} else if ((lineptr = strstr(line, "BGE")) != NULL) {
+		index = lineptr - line;
+
+                fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "blt" : "bge");
+                line = lineptr + strlen("BGE");
+
+                *invertedNbr = *invertedNbr - 1;
+
+	} else if ((lineptr = strstr(line, "BNE.UN")) != NULL) {
+        	index = lineptr - line;
+
+		fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "beq" : "bne.un");
+                line = lineptr + strlen("BNE.UN");
+
+                *invertedNbr = *invertedNbr - 1;
+
+	} else if ((lineptr = strstr(line, "BEQ")) != NULL) {
+        	index = lineptr - line;
+
+		fprintf(pStream, "%.*s", index, line);
+                fprintf(pStream, (*invertedNbr > 0) ? "bne.un" : "beq");
+                line = lineptr + strlen("BEQ");
+
+                *invertedNbr = *invertedNbr - 1;
+	}
+
+	return line;
 }
 
-void produce_code(GNode* node) {
-    if (node->data == "code") {
-        produce_code(g_node_nth_child(node, 0));
-        produce_code(g_node_nth_child(node, 1));
-    } else if (node->data == "affectation") {
-        produce_code(g_node_nth_child(node, 1));
-        fprintf(stream, " stloc\t%ld\n", (long)g_node_nth_child(g_node_nth_child(node, 0), 0)->data - 1);
-    } else if (node->data == "add") {
-        produce_code(g_node_nth_child(node, 0));
-        produce_code(g_node_nth_child(node, 1));
-        fprintf(stream, " add\n");
-    } else if (node->data == "sub") {
-        produce_code(g_node_nth_child(node, 0));
-        produce_code(g_node_nth_child(node, 1));
-        fprintf(stream, " sub\n");
-    } else if (node->data == "mul") {
-        produce_code(g_node_nth_child(node, 0));
-        produce_code(g_node_nth_child(node, 1));
-        fprintf(stream, " mul\n");
-    } else if (node->data == "div") {
-        produce_code(g_node_nth_child(node, 0));
-        produce_code(g_node_nth_child(node, 1));
-        fprintf(stream, " div\n");
-    } else if (node->data == "number") {
-        fprintf(stream, " ldc.i4\t%ld\n", (long)g_node_nth_child(node, 0)->data);
-    } else if (node->data == "identifier") {
-        fprintf(stream, " ldloc\t%ld\n", (long)g_node_nth_child(node, 0)->data - 1);
-    } else if (node->data == "print") {
-        produce_code(g_node_nth_child(node, 0));
-        fprintf(stream, " call void class[mscorlib]System.Console::WriteLine(int32)\n");
-    } else if (node->data == "read") {
-        fprintf(stream, " call string class[mscorlib]System.Console::ReadLine()\n");
-        fprintf(stream, " call int32 int32::Parse(string)\n");
-        fprintf(stream, " stloc\t%ld\n", (long)g_node_nth_child(g_node_nth_child(node, 0), 0)->data - 1);
-    }
+void begin_code() {
+	fprintf(stream, ".assembly test {}\n");
+	fprintf(stream, ".assembly extern mscorlib {}\n");
+	fprintf(stream, ".method static void main() {\n");
+	fprintf(stream, "\t.entrypoint\n");
+	fprintf(stream, "\t.maxstack 10\n");
+	fprintf(stream, "\t.locals init (int32, int32, int32)\n");
+}
+
+void produce_code(GNode* node, FILE *pStream, char *textPtr) {
+
+	if (node->data == "code") {
+    		produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+    		produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+    	} else if (node->data == "affectation") {
+    		produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+    		ilcpt += 1;
+    		fprintf(pStream, "\tIL_%04x:  ", ilcpt);//TODO
+	        fprintf(pStream, "stloc.%ld\n", (long)g_node_nth_child(g_node_nth_child(node, 0), 0)->data - 1);
+
+	} else if (node->data == "print") {
+	        produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+
+	        ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+    		fprintf(pStream, "call void class[mscorlib]System.Console::WriteLine(int32)\n");
+    		ilcpt += 4;
+
+    	} else if (node->data == "read") {
+
+    		ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+                fprintf(pStream, "call string class[mscorlib]System.Console::ReadLine()\n");
+
+		ilcpt += 5;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+         	fprintf(pStream, "call int32 int32::Parse(string)\n");
+
+		ilcpt += 5;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "stloc.%ld\n", (long)g_node_nth_child(g_node_nth_child(node, 0), 0)->data - 1);
+
+        } else if (node->data == "if") {
+        	FILE	*ifStream;
+        	int	if_next;
+        	int	if_end;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+		char	invertedNbr = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+		if ((ifStream = tmpfile()) == NULL) {
+			printf("Cannot create a temporary file, exit\n");
+			exit(1);
+		}
+
+		produce_code(g_node_nth_child(node, 0), ifStream, "NEXT");
+		produce_code(g_node_nth_child(node, 1), ifStream, textPtr);
+
+		ilcpt += 1;
+		fprintf(ifStream, "\tIL_%04x:  ", ilcpt);
+		fprintf(ifStream, "br %s\n\n", textPtr);
+
+		ilcpt += 4;
+		if_next = ilcpt + 1;
+		produce_code(g_node_nth_child(node, 2), ifStream, textPtr);
+		produce_code(g_node_nth_child(node, 3), ifStream, textPtr);
+		if_end = ilcpt + 1;
+
+		produce_code(g_node_nth_child(node, 4), ifStream, textPtr);
+
+		invertedNbr = 0;
+		rewind(ifStream);
+		while ((read = getline(&line, &len, ifStream)) != -1) {
+			line = check_bool(pStream, line, &invertedNbr);
+
+			if ((lineptr = strstr(line, "NEXT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", if_next);
+                        	fprintf(pStream, "%s", lineptr + strlen("NEXT"));
+
+                        } else if ((lineptr = strstr(line, "END")) != NULL) {
+                        	index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", if_end);
+                        	fprintf(pStream, "%s", lineptr + strlen("END"));
+
+                        } else {
+                        	fprintf(pStream, "%s", line);
+                        }
+              	}
+
+    		fclose(ifStream);
+
+        } else if (node->data == "elseif") {
+        	FILE	*elseifStream;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+		char	invertedNbr = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+		if ((elseifStream = tmpfile()) == NULL) {
+			printf("Cannot create a temporary file, exit\n");
+			exit(1);
+		}
+
+
+		produce_code(g_node_nth_child(node, 0), elseifStream, "NEXT");
+		produce_code(g_node_nth_child(node, 1), elseifStream, textPtr);
+		produce_code(g_node_nth_child(node, 2), elseifStream, textPtr);
+		ilcpt += 1;
+                fprintf(elseifStream, "\tIL_%04x:  ", ilcpt);
+                fprintf(elseifStream, "br END\n\n");
+
+                ilcpt += 4;
+
+		invertedNbr = 0;
+		rewind(elseifStream);
+		while ((read = getline(&line, &len, elseifStream)) != -1) {
+			line = check_bool(pStream, line, &invertedNbr);
+
+			if ((lineptr = strstr(line, "NEXT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", ilcpt + 1);
+                        	fprintf(pStream, "%s", lineptr + strlen("NEXT"));
+
+			} else {
+				fprintf(pStream, "%s", line);
+                       	}
+              	}
+
+    		fclose(elseifStream);
+
+        } else if (node->data == "else") {
+        	produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+
+        } else if (node->data == "endif") {
+        	//nothing
+
+        } else if (node->data == "while") {
+        	FILE	*whileStream;
+        	int	while_startInstruc;
+        	int	while_endInstruc;
+        	int	while_end;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+		char	invertedNbr = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+        	if ((whileStream = tmpfile()) == NULL) {
+        		printf("Cannot create a temporary file, exit\n");
+        		exit(1);
+        	}
+
+        	ilcpt += 1;
+        	fprintf(whileStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(whileStream, "br END_INSTRUC\n\n");
+        	ilcpt += 4;
+
+		while_startInstruc = ilcpt + 1;
+        	produce_code(g_node_nth_child(node, 1), whileStream, textPtr);
+        	while_endInstruc = ilcpt + 1;
+
+        	produce_code(g_node_nth_child(node, 0), whileStream, "START");
+        	produce_code(g_node_nth_child(node, 2), whileStream, textPtr);
+
+        	while_end = ilcpt + 1;
+
+		invertedNbr = 1;
+		rewind(whileStream);
+		while ((read = getline(&line, &len, whileStream)) != -1) {
+			line = check_bool(pStream, line, &invertedNbr);
+
+			if ((lineptr = strstr(line, "END_INSTRUC")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", while_endInstruc);
+                        	fprintf(pStream, "%s", lineptr + strlen("END_INSTRUC"));
+
+                        } else if ((lineptr = strstr(line, "START")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", while_startInstruc);
+                        	fprintf(pStream, "%s", lineptr + strlen("START"));
+
+                        } else if ((lineptr = strstr(line, "BREAK")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", while_end);
+                        	fprintf(pStream, "%s", lineptr + strlen("BREAK"));
+
+                        } else if ((lineptr = strstr(line, "CONTINUE")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", while_endInstruc);
+                        	fprintf(pStream, "%s", lineptr + strlen("CONTINUE"));
+
+			} else {
+                        	fprintf(pStream, "%s", line);
+                        }
+              	}
+
+    		fclose(whileStream);
+
+	} else if (node->data == "code_while") {
+		produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+		produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+        } else if (node->data == "continue") {
+        	ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "br CONTINUE\n\n");
+    		ilcpt += 4;
+
+        } else if (node->data == "break") {
+        	ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+                fprintf(pStream, "br BREAK\n\n");
+    		ilcpt += 4;
+
+        } else if (node->data == "endwhile") {
+        	//Ignored
+
+        } else if (node->data == "true") {
+
+        } else if (node->data == "false") {
+
+        } else if (node->data == "sup_egal") {
+
+                produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+                produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+        	ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "BLT %s\n\n", textPtr);
+		ilcpt += 4;
+
+        } else if (node->data == "inf_egal") {
+                produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+                produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+		ilcpt += 1;
+                fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+                fprintf(pStream, "BGT %s\n\n", textPtr);
+                ilcpt += 4;
+
+        } else if (node->data == "sup") {
+                produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+                produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+		ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "BLE %s\n\n", textPtr);
+		ilcpt += 4;
+
+        } else if (node->data == "inf") {
+                produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+                produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+		ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "BGE %s\n\n", textPtr);
+		ilcpt += 4;
+
+        } else if (node->data == "egal") {
+                produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+                produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+		ilcpt += 1;
+        	fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "BNE.UN %s\n\n", textPtr);
+		ilcpt += 4;
+
+        } else if (node->data == "sharp") {
+        	//unsupported
+
+        } else if (node->data == "not") {
+        	FILE	*notStream;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+        	if ((notStream = tmpfile()) == NULL) {
+        		printf("Cannot create a temporary file, exit\n");
+        		exit(1);
+        	}
+                produce_code(g_node_nth_child(node, 0), notStream, textPtr);
+
+		rewind(notStream);
+		while ((read = getline(&line, &len, notStream)) != -1) {
+
+			if ((lineptr = strstr(line, "BLT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "BGE");
+                        	fprintf(pStream, "%s", lineptr + strlen("BLT"));
+
+                        } else if ((lineptr = strstr(line, "BGT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "BLE");
+                        	fprintf(pStream, "%s", lineptr + strlen("BGT"));
+
+                        } else if ((lineptr = strstr(line, "BLE")) != NULL) {
+                        	index = lineptr - line;
+
+                                fprintf(pStream, "%.*s", index, line);
+                                fprintf(pStream, "BGT");
+                                fprintf(pStream, "%s", lineptr + strlen("BLE"));
+
+ 			} else if ((lineptr = strstr(line, "BGE")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "BLT");
+                        	fprintf(pStream, "%s", lineptr + strlen("BGE"));
+
+                        } else if ((lineptr = strstr(line, "BNE.UN")) != NULL) {
+                         	index = lineptr - line;
+
+				fprintf(pStream, "%.*s", index, line);
+                                fprintf(pStream, "BEQ");
+                                fprintf(pStream, "%s", lineptr + strlen("BNE.UN"));
+
+                        } else if ((lineptr = strstr(line, "BEQ")) != NULL) {
+                         	index = lineptr - line;
+
+				fprintf(pStream, "%.*s", index, line);
+                                fprintf(pStream, "NE.UN");
+                                fprintf(pStream, "%s", lineptr + strlen("BEQ"));
+
+                        } else {
+                        	fprintf(pStream, "%s", line);
+                        }
+              	}
+
+    		fclose(notStream);
+
+        } else if (node->data == "and") {
+        	FILE	*andStream;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+		char	invertedNbr = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+        	if ((andStream = tmpfile()) == NULL) {
+        		printf("Cannot create a temporary file, exit\n");
+        		exit(1);
+        	}
+
+        	produce_code(g_node_nth_child(node, 0), andStream, textPtr);
+        	produce_code(g_node_nth_child(node, 1), andStream, textPtr);
+
+		invertedNbr = 0;
+		rewind(andStream);
+		while ((read = getline(&line, &len, andStream)) != -1) {
+			//line = check_bool(pStream, line, &invertedNbr);
+			//fprintf(pStream, "%s", line);
+
+			if ((lineptr = strstr(line, "BLT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "blt");
+                        	fprintf(pStream, "%s", lineptr + strlen("BLT"));
+
+                        } else if ((lineptr = strstr(line, "BGT")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "bgt");
+                        	fprintf(pStream, "%s", lineptr + strlen("BGT"));
+
+                        } else if ((lineptr = strstr(line, "BLE")) != NULL) {
+                        	index = lineptr - line;
+
+                                fprintf(pStream, "%.*s", index, line);
+                                fprintf(pStream, "ble");
+                                fprintf(pStream, "%s", lineptr + strlen("BLE"));
+
+ 			} else if ((lineptr = strstr(line, "BGE")) != NULL) {
+				index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "bge");
+                        	fprintf(pStream, "%s", lineptr + strlen("BGE"));
+
+                        }
+                         else if ((lineptr = strstr(line, "BNE.UN")) != NULL) {
+                         	index = lineptr - line;
+
+				fprintf(pStream, "%.*s", index, line);
+                                fprintf(pStream, "bne.un");
+                                fprintf(pStream, "%s", lineptr + strlen("BNE.UN"));
+                        } else {
+                        	fprintf(pStream, "%s", line);
+                        }
+              	}
+
+    		fclose(andStream);
+
+        } else if (node->data == "or") {
+        	FILE	*orStream;
+        	int	or_endInstruc;
+
+		char    *line = NULL;
+		char    *lineptr = NULL;
+		int 	index = 0;
+		char	invertedNbr = 0;
+        	size_t	len = 0;
+        	ssize_t	read;
+
+        	if ((orStream = tmpfile()) == NULL) {
+        		printf("Cannot create a temporary file, exit\n");
+        		exit(1);
+        	}
+
+        	produce_code(g_node_nth_child(node, 0), orStream, "END");
+        	produce_code(g_node_nth_child(node, 1), orStream, textPtr);
+        	or_endInstruc = ilcpt + 1;
+
+		invertedNbr = 1;
+		rewind(orStream);
+		while ((read = getline(&line, &len, orStream)) != -1) {
+			line = check_bool(pStream, line, &invertedNbr);
+
+			if ((lineptr = strstr(line, "END")) != NULL) {
+                        	index = lineptr - line;
+
+                        	fprintf(pStream, "%.*s", index, line);
+                        	fprintf(pStream, "IL_%04x", or_endInstruc);
+                        	fprintf(pStream, "%s", lineptr + strlen("END"));
+
+                        } else {
+                        	fprintf(pStream, "%s", line);
+                        }
+              	}
+
+    		fclose(orStream);
+
+        } else if (node->data == "add") {
+        	produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+	        produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+	        ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "add\n");
+
+    	} else if (node->data == "sub") {
+        	produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+        	produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+	        ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "sub\n");
+
+    	} else if (node->data == "mul") {
+        	produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+        	produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+	        ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "mul\n");
+
+    	} else if (node->data == "div") {
+        	produce_code(g_node_nth_child(node, 0), pStream, textPtr);
+        	produce_code(g_node_nth_child(node, 1), pStream, textPtr);
+
+	        ilcpt += 1;
+	        fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "div\n");
+
+    	}else if (node->data == "identifier") {
+	        ilcpt += 1;
+		fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+                fprintf(pStream, "ldloc.%ld\n", (long)g_node_nth_child(node, 0)->data - 1);
+
+        } else if (node->data == "number") {
+        	ilcpt += 1;
+		fprintf(pStream, "\tIL_%04x:  ", ilcpt);
+        	fprintf(pStream, "ldc.i4.%ld\n", (long)g_node_nth_child(node, 0)->data);
+
+    	} else if (node->data == "end") {
+    		//Ignored
+    	}
 }
 
 void end_code() {
+	ilcpt += 1;
+	fprintf(stream, "\tIL_%04x:  ", ilcpt);
+	fprintf(stream, "ret\n");
+	fprintf(stream, "}\n");
 }
 
 int main(int argc, char **argv) {
-    if (argc == 2) {
-        char *file_name_input = argv[1];
-        char *extension;
-        char *directory_delimiter;
-        char *basename;
-        char *module_name;
-        extension = rindex(file_name_input, '.');
-        if (!extension || strcmp(extension, ".facile") != 0) {
-            fprintf(stderr, "Input filename extension must be '.facile'\n");
-            return EXIT_FAILURE;
-        }
+	if (argc == 2) {
+        	char *file_name_input = argv[1];
+        	char *extension;
+        	char *directory_delimiter;
+        	char *basename;
+        	char *module_name;
+	        extension = rindex(file_name_input, '.');
+        	if (!extension || strcmp(extension, ".facile") != 0) {
+            		fprintf(stderr, "Input filename extension must be '.facile'\n");
+            		return EXIT_FAILURE;
+        	}
 
-        directory_delimiter = rindex(file_name_input, '/');
-        if (!directory_delimiter) {
-            directory_delimiter = rindex(file_name_input, '\\');
-        }
+        	directory_delimiter = rindex(file_name_input, '/');
+        	if (!directory_delimiter) {
+            		directory_delimiter = rindex(file_name_input, '\\');
+        	}
 
-        if (directory_delimiter) {
-            basename = strdup(directory_delimiter + 1);
-        } else {
-            basename = strdup(file_name_input);
-        }
+        	if (directory_delimiter) {
+            		basename = strdup(directory_delimiter + 1);
+        	} else {
+            		basename = strdup(file_name_input);
+	        }
 
-        module_name = strdup(basename);
-        *rindex(module_name, '.') = '\0';
-        strcpy(rindex(basename, '.'), ".il");
-        char *onechar = module_name;
-        if (!isalpha(*onechar) && *onechar != '_') {
-            free(basename);
-            fprintf(stderr, "Base input filename must start with a letter or an underscore\n");
-            return EXIT_FAILURE;
-        }
-        onechar++;
-        while (*onechar) {
-            if (!isalnum(*onechar) && *onechar != '_') {
-                free(basename);
-                fprintf(stderr, "Base input filename cannot contains special characters\n");
-                return EXIT_FAILURE;
-            }
-            onechar++;
-        }
+        	module_name = strdup(basename);
+        	*rindex(module_name, '.') = '\0';
+        	strcpy(rindex(basename, '.'), ".il");
+        	char *onechar = module_name;
+        	if (!isalpha(*onechar) && *onechar != '_') {
+            		free(basename);
+            		fprintf(stderr, "Base input filename must start with a letter or an underscore\n");
+            		return EXIT_FAILURE;
+        	}
+        	onechar++;
+        	while (*onechar) {
+            		if (!isalnum(*onechar) && *onechar != '_') {
+                		free(basename);
+                		fprintf(stderr, "Base input filename cannot contains special characters\n");
+                		return EXIT_FAILURE;
+            		}
+            		onechar++;
+        	}
 
-        if (stdin = fopen(file_name_input, "r")) {
-            if (stream = fopen(basename, "w")) {
-                table = g_hash_table_new_full(g_str_hash, g_str_equal, free, NULL);
-                yyparse();
-                g_hash_table_destroy(table);
-                fclose(stream);
-                fclose(stdin);
-            } else {
-                free(basename);
-                fclose(stdin);
-                fprintf(stderr, "Output filename cannot be opened\n");
-                return EXIT_FAILURE;
-            }
-        } else {
-            free(basename);
-            fprintf(stderr, "Input filename cannot be opened\n");
-            return EXIT_FAILURE;
-        }
-        free(basename);
-    }
-    else {
-        fprintf(stderr, "No input filename given\n");
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+        	if (stdin = fopen(file_name_input, "r")) {
+            		if (stream = fopen(basename, "w")) {
+                		table = g_hash_table_new_full(g_str_hash, g_str_equal, free, NULL);
+                		yyparse();
+                		g_hash_table_destroy(table);
+                		fclose(stream);
+                		fclose(stdin);
+            		} else {
+                		free(basename);
+                		fclose(stdin);
+                		fprintf(stderr, "Output filename cannot be opened\n");
+                		return EXIT_FAILURE;
+            		}
+        	} else {
+            		free(basename);
+            		fprintf(stderr, "Input filename cannot be opened\n");
+            		return EXIT_FAILURE;
+        	}
+        	free(basename);
+    	} else {
+        	fprintf(stderr, "No input filename given\n");
+        	return EXIT_FAILURE;
+    	}
+    	return EXIT_SUCCESS;
 }

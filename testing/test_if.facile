@@ -1,0 +1,25 @@
+read a;
+read b;
+
+while not a = b do
+    while a > b do
+
+        if a > b or a < b then
+            print a;
+            print a;
+        elseif a < b then
+            print b;
+            print b;
+        else
+            print a + b;
+            print a + b;
+        endif
+
+        b := b + 1;
+        break
+    endwhile
+    a := a + 1;
+    continue
+endwhile
+print b;
+print b;

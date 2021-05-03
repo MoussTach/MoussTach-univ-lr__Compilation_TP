@@ -54,15 +54,35 @@ extern int yydebug;
     TOK_AFFECTATION = 260,
     TOK_SEMI_COLON = 261,
     TOK_IF = 262,
-    TOK_THEN = 263,
-    TOK_ADD = 264,
-    TOK_SUB = 266,
-    TOK_MUL = 268,
-    TOK_DIV = 270,
-    TOK_OPEN_PARENTHESIS = 272,
-    TOK_CLOSE_PARENTHESIS = 273,
-    TOK_PRINT = 274,
-    TOK_READ = 275
+    TOK_ELSE = 263,
+    TOK_ELSEIF = 264,
+    TOK_THEN = 265,
+    TOK_ENDIF = 266,
+    TOK_WHILE = 267,
+    TOK_DO = 268,
+    TOK_CONTINUE = 269,
+    TOK_BREAK = 270,
+    TOK_ENDWHILE = 271,
+    TOK_END = 272,
+    TOK_ADD = 273,
+    TOK_SUB = 275,
+    TOK_MUL = 277,
+    TOK_DIV = 279,
+    TOK_NOT = 281,
+    TOK_TRUE = 283,
+    TOK_FALSE = 284,
+    TOK_SUP_EGAL = 285,
+    TOK_INF_EGAL = 286,
+    TOK_SUP = 287,
+    TOK_INF = 288,
+    TOK_EGAL = 289,
+    TOK_SHARP = 290,
+    TOK_AND = 291,
+    TOK_OR = 292,
+    TOK_OPEN_PARENTHESIS = 293,
+    TOK_CLOSE_PARENTHESIS = 294,
+    TOK_PRINT = 295,
+    TOK_READ = 296
   };
 #endif
 
@@ -70,13 +90,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 21 "facile.y"
+#line 26 "facile.y"
 
 	gulong	number;
 	gchar	*string;
 	GNode	*node;
 
-#line 80 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.h"
+#line 100 "/home/mousstach/Bureau/univ-lr/L3/semestre6/univ-lr__Compilation_TP/build/facile.y.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

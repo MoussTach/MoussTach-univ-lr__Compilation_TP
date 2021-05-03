@@ -1,0 +1,11 @@
+read a;
+read b;
+c := 0;
+while c < b do
+    while a < b do
+        a := a + 1;
+        continue
+        break
+    endwhile
+    c := c + 1;
+endwhile
